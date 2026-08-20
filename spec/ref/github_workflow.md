@@ -51,6 +51,7 @@ Explain how authentication is handled in this repo.
 - The `OPENCODE_API_KEY` secret must be set in the repository (Settings → Secrets and variables → Actions). It is an OpenCode Go subscription key.
 - The model used is `opencode-go/deepseek-v4-flash`.
 - Commits and pull requests created by the workflow are attributed to `opencode-agent[bot]`.
+- **Required:** enable *"Allow GitHub Actions to create and approve pull requests"* in the repository settings (**Settings → Actions → General → Workflow permissions**). Without it, `/agent:implement` cannot create pull requests and the run fails with "GitHub Actions is not permitted to create or approve pull requests." If the repository belongs to an organization, an org admin may need to enable the same setting at the organization level.
 
 ## Source
 
