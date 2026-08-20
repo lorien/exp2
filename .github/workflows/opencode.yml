@@ -25,6 +25,10 @@ jobs:
         with:
           model: opencode-go/deepseek-v4-flash
           use_github_token: true
+          share: false
           prompt: |
-            Reply to this issue by posting a new comment that contains exactly this text:
+            You are responding to the GitHub issue that triggered this workflow.
+            Do NOT post any comments, create branches, or use any GitHub tools.
+            Your final reply will be posted automatically as a comment by the system.
+            Reply with exactly this text and nothing else:
             I see
