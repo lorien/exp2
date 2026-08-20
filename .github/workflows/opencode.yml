@@ -40,8 +40,28 @@ jobs:
           git config --global user.name "opencode-agent[bot]"
           git config --global user.email "opencode-agent[bot]@users.noreply.github.com"
 
+      - name: Check actor has write or higher access
+        id: check_access
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            if (context.actor.toLowerCase() === context.repo.owner.toLowerCase()) return 'true'
+            try {
+              await github.rest.repos.checkCollaborator({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.actor,
+                permission: 'push',
+              })
+              return 'true'
+            } catch (e) {
+              if (e.status === 404) return 'false'
+              throw e
+            }
+
       - name: Research mode
-        if: steps.detect.outputs.result == 'research'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'research'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -59,7 +79,7 @@ jobs:
             Your final reply will be posted automatically as a comment by the system.
 
       - name: Implement mode
-        if: steps.detect.outputs.result == 'implement'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'implement'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -83,7 +103,7 @@ jobs:
               - Your final reply will be posted automatically as a comment on the issue by the system.
 
       - name: Invalid mention
-        if: steps.detect.outputs.result == 'invalid'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'invalid'
         uses: actions/github-script@v7
         with:
           script: |

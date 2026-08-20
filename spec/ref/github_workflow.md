@@ -43,12 +43,13 @@ Explain how authentication is handled in this repo.
 
 - Only the first line of the message is parsed as the command. Everything after it is content for the agent.
 - The bot's own replies (research proposals, follow-up questions, "invalid mention", "Created PR #N") never start with `/agent:`, so they do not re-trigger the workflow.
-- The user who triggers the workflow needs write access to the repository.
+- The user who triggers the workflow must be a **collaborator of the repository with write access or higher** (Settings → Collaborators and teams). The repository owner is always allowed. Commands from anyone else — including read-only collaborators — are completely ignored: the workflow does nothing and posts no reply.
 - After `/agent:implement`, the agent's final message becomes the pull request description.
 
 ## Setup / prerequisites
 
 - The `OPENCODE_API_KEY` secret must be set in the repository (Settings → Secrets and variables → Actions). It is an OpenCode Go subscription key.
+- Add the people allowed to trigger the agent as **collaborators with the Write level or higher** (Settings → Collaborators and teams). Only they can run `/agent:` commands.
 - The model used is `opencode-go/deepseek-v4-flash`.
 - Commits and pull requests created by the workflow are attributed to `opencode-agent[bot]`.
 - **Required:** enable *"Allow GitHub Actions to create and approve pull requests"* in the repository settings (**Settings → Actions → General → Workflow permissions**). Without it, `/agent:implement` cannot create pull requests and the run fails with "GitHub Actions is not permitted to create or approve pull requests." If the repository belongs to an organization, an org admin may need to enable the same setting at the organization level.
