@@ -60,6 +60,24 @@ Failure detection is based on the outcome of the research/implement step. Any fa
 
 The status comment is separate from the agent's result comment (created and edited by the opencode action itself), which carries the actual content: the research proposal, the PR number, follow-up questions, or the error message. No run logs are persisted — the status comment and the agent's result comment are the only traces left on the issue. Status comments never start with `/agent:`, so they do not re-trigger the workflow.
 
+## Headless permission handling
+
+The GitHub action runs opencode headlessly via `opencode github run` — there is no `--auto` flag, no TTY, and nothing ever answers a permission prompt. As a result, any permission that resolves to `ask` blocks the run indefinitely (opencode awaits a reply that never arrives) until GitHub force-cancels the job at the default 6-hour limit.
+
+opencode's built-in defaults make several permissions `ask`:
+- `external_directory` — default `ask` (e.g. the agent touching `/tmp/*` outside the repo)
+- `doom_loop` — default `ask` (same tool call repeated 3× identically)
+- `read` — default `ask` for `*.env` and `*.env.*` files (secrets guard)
+
+To prevent hangs, the repository's `opencode.json` overrides these so every permission is either `allow` or `deny` (never `ask`):
+
+- `external_directory: "allow"` — external-dir access is auto-approved (broad allow).
+- `doom_loop: "deny"` — a runaway identical-call loop fails cleanly instead of hanging.
+- `question: "deny"` — the agent's `question` tool is blocked (the default `build` agent would otherwise re-enable it).
+- `read` — `*.env` / `*.env.*` are `allow`, so secret-file reads no longer prompt.
+
+Config `permission` is merged into the agent's ruleset last, so it wins over the built-in defaults. Tradeoff: `.env` files are readable by the agent, which is acceptable because GitHub Actions workspaces are ephemeral and isolated.
+
 ## Setup / prerequisites
 
 - The `OPENCODE_API_KEY` secret must be set in the repository (Settings → Secrets and variables → Actions). It is an OpenCode Go subscription key.
