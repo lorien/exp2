@@ -7,7 +7,9 @@ on:
 
 jobs:
   opencode:
-    if: github.event_name == 'issues' || contains(github.event.comment.body, '/opencode') || contains(github.event.comment.body, '/oc')
+    if: >-
+      (github.event_name == 'issues' && startsWith(github.event.issue.body, '/oc ')) ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/oc '))
     runs-on: ubuntu-latest
     permissions:
       contents: write
