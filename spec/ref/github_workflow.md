@@ -46,6 +46,20 @@ Explain how authentication is handled in this repo.
 - The user who triggers the workflow must be a **collaborator of the repository with write access or higher** (Settings → Collaborators and teams). The repository owner is always allowed. Commands from anyone else — including read-only collaborators — are completely ignored: the workflow does nothing and posts no reply.
 - After `/agent:implement`, the agent's final message becomes the pull request description.
 
+## Status tracking
+
+Every `/agent:research` and `/agent:implement` run posts a status comment on the issue that is edited throughout the run lifecycle:
+
+1. **queued** — posted when the run starts
+2. **running** — posted just before the agent runs
+3. **done** / **failed** / **cancelled** — posted when the run finishes
+
+The status comment is a single mutable comment per run, so each run leaves exactly one status comment; comments from different runs accumulate on the issue. Each status comment links to the corresponding Actions run log.
+
+Failure detection is based on the outcome of the research/implement step. Any failure — bad or expired API key, invalid model, agent crash, git push or PR creation failure, permission errors — is reported as `failed`. A run cancelled manually is reported as `cancelled`.
+
+The status comment is separate from the agent's result comment (created and edited by the opencode action itself), which carries the actual content: the research proposal, the PR number, follow-up questions, or the error message. No run logs are persisted — the status comment and the agent's result comment are the only traces left on the issue. Status comments never start with `/agent:`, so they do not re-trigger the workflow.
+
 ## Setup / prerequisites
 
 - The `OPENCODE_API_KEY` secret must be set in the repository (Settings → Secrets and variables → Actions). It is an OpenCode Go subscription key.

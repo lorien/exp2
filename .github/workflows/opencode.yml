@@ -60,7 +60,54 @@ jobs:
               throw e
             }
 
+      - name: Post queued status
+        id: status-queued
+        if: >-
+          steps.check_access.outputs.result == 'true' &&
+          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const mode = '${{ steps.detect.outputs.result }}'
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = [
+              `**opencode run queued** — \`/agent:${mode}\``,
+              'Status: queued',
+              `[View run logs](${runUrl})`,
+            ].join('\n')
+            const comment = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            })
+            core.setOutput('comment_id', comment.data.id)
+
+      - name: Post running status
+        id: status-running
+        if: >-
+          steps.check_access.outputs.result == 'true' &&
+          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentId = Number('${{ steps.status-queued.outputs.comment_id }}')
+            if (!commentId) return
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = [
+              '**opencode run in progress**',
+              'Status: running',
+              `[View run logs](${runUrl})`,
+            ].join('\n')
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body,
+            })
+
       - name: Research mode
+        id: research
         if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'research'
         uses: anomalyco/opencode/github@latest
         env:
@@ -79,6 +126,7 @@ jobs:
             Your final reply will be posted automatically as a comment by the system.
 
       - name: Implement mode
+        id: implement
         if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'implement'
         uses: anomalyco/opencode/github@latest
         env:
@@ -101,6 +149,38 @@ jobs:
               - Do NOT make any code changes.
               - Put your follow-up questions in your final reply.
               - Your final reply will be posted automatically as a comment on the issue by the system.
+
+      - name: Post final status
+        id: status-final
+        if: >-
+          always() && steps.check_access.outputs.result == 'true' &&
+          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentId = Number('${{ steps.status-queued.outputs.comment_id }}')
+            if (!commentId) return
+            const researchOutcome = '${{ steps.research.outcome }}'
+            const implementOutcome = '${{ steps.implement.outcome }}'
+            const activeOutcome = researchOutcome !== 'skipped' ? researchOutcome : implementOutcome
+            const status =
+              activeOutcome === 'success'
+                ? 'done'
+                : activeOutcome === 'cancelled'
+                  ? 'cancelled'
+                  : 'failed'
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = [
+              `**opencode run ${status}**`,
+              `Status: ${status}`,
+              `[View run logs](${runUrl})`,
+            ].join('\n')
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body,
+            })
 
       - name: Invalid mention
         if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'invalid'
