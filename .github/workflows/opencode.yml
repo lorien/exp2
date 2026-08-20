@@ -8,8 +8,8 @@ on:
 jobs:
   opencode:
     if: >-
-      (github.event_name == 'issues' && startsWith(github.event.issue.body, '/oc:')) ||
-      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/oc:'))
+      (github.event_name == 'issues' && startsWith(github.event.issue.body, '/agent:')) ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/agent:'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,13 +24,19 @@ jobs:
           script: |
             const body = context.payload.issue?.body ?? context.payload.comment?.body ?? ''
             const firstLine = body.split('\n')[0].trim()
-            if (firstLine === '/oc:research') return 'research'
-            if (firstLine === '/oc:implement') return 'implement'
+            if (firstLine === '/agent:research') return 'research'
+            if (firstLine === '/agent:implement') return 'implement'
             return 'invalid'
 
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      - name: Configure git identity and auth
+        run: |
+          git config --global user.name "opencode-agent[bot]"
+          git config --global user.email "opencode-agent[bot]@users.noreply.github.com"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GITHUB_TOKEN}" | base64)"
 
       - name: Research mode
         if: steps.detect.outputs.result == 'research'
@@ -45,6 +51,8 @@ jobs:
           prompt: |
             You are researching the GitHub issue that triggered this workflow.
             Do NOT post any comments, create branches, or use any GitHub tools.
+            You may use read-only git commands for research (e.g. git log, git diff, git status, git show, git blame).
+            Do NOT run git commands that change the repository state: no git commit, git push, git checkout, git branch, git reset, git rebase, git merge, git stash, git clean, git tag.
             Investigate the codebase and the issue, then propose concrete changes in your final reply.
             Your final reply will be posted automatically as a comment by the system.
 
@@ -61,6 +69,8 @@ jobs:
           prompt: |
             You are responding to the GitHub issue that triggered this workflow.
             Do NOT create branches or pull requests, and do NOT use any GitHub tools.
+            You may use read-only git commands for research (e.g. git log, git diff, git status, git show, git blame).
+            Do NOT run git commands that change the repository state: no git commit, git push, git checkout, git branch, git reset, git rebase, git merge, git stash, git clean, git tag.
             If the requirements in the issue are clear:
               - Implement the changes discussed in the issue by editing the code.
               - The system will automatically commit your changes and open a pull request.
@@ -79,5 +89,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: 'Invalid mention. Supported commands: `/oc:research`, `/oc:implement`.',
+              body: 'Invalid mention. Supported commands: `/agent:research`, `/agent:implement`.',
             })
