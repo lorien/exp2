@@ -30,13 +30,12 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Configure git identity and auth
+      - name: Configure git identity
         run: |
           git config --global user.name "opencode-agent[bot]"
           git config --global user.email "opencode-agent[bot]@users.noreply.github.com"
-          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:${GITHUB_TOKEN}" | base64)"
 
       - name: Research mode
         if: steps.detect.outputs.result == 'research'
