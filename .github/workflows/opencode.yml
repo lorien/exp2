@@ -22,7 +22,10 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const body = context.payload.issue?.body ?? context.payload.comment?.body ?? ''
+            const body =
+              context.eventName === 'issue_comment'
+                ? context.payload.comment?.body ?? ''
+                : context.payload.issue?.body ?? ''
             const firstLine = body.split('\n')[0].trim()
             if (firstLine === '/agent:research') return 'research'
             if (firstLine === '/agent:implement') return 'implement'
