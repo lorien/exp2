@@ -11,6 +11,8 @@ The workflow runs on two events:
 
 But it only does anything if the **first line** of the issue body or comment starts with the `/agent:` prefix. Any text on the lines after the command is passed to the agent as context, so feel free to describe your request in detail below the command.
 
+The workflow extracts everything after the command line and injects it into the agent's prompt inside a `<user_request>` block (the command line itself is stripped out). If no extra lines are provided, the placeholder `(no additional details were provided)` is used instead.
+
 ## Commands
 
 Put one of the following as the very first line of the issue body or a comment:
@@ -41,7 +43,7 @@ Explain how authentication is handled in this repo.
 
 ## Behavior notes
 
-- Only the first line of the message is parsed as the command. Everything after it is content for the agent.
+- Only the first line of the message is parsed as the command. Everything after it is passed to the agent verbatim inside a `<user_request>` block in the prompt. If there is nothing after the command line, the agent receives the placeholder `(no additional details were provided)`.
 - The bot's own replies (research proposals, follow-up questions, "invalid mention", "Created PR #N") never start with `/agent:`, so they do not re-trigger the workflow.
 - The user who triggers the workflow must be a **collaborator of the repository with write access or higher** (Settings → Collaborators and teams). The repository owner is always allowed. Commands from anyone else — including read-only collaborators — are completely ignored: the workflow does nothing and posts no reply.
 - After `/agent:implement`, the agent's final message becomes the pull request description.

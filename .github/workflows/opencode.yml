@@ -38,10 +38,17 @@ jobs:
               context.eventName === 'issue_comment'
                 ? context.payload.comment?.body ?? ''
                 : context.payload.issue?.body ?? ''
-            const firstLine = body.split('\n')[0].trim()
-            if (firstLine === '/agent:research') return 'research'
-            if (firstLine === '/agent:implement') return 'implement'
-            return 'invalid'
+            const [firstLine, ...rest] = body.split('\n')
+            const command = firstLine.trim()
+            const mode =
+              command === '/agent:research'
+                ? 'research'
+                : command === '/agent:implement'
+                  ? 'implement'
+                  : 'invalid'
+            core.setOutput('mode', mode)
+            const request = rest.join('\n').trim()
+            core.setOutput('request', request || '(no additional details were provided)')
 
       - uses: actions/checkout@v6
         with:
@@ -76,11 +83,11 @@ jobs:
         id: status-queued
         if: >-
           steps.check_access.outputs.result == 'true' &&
-          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+          (steps.detect.outputs.mode == 'research' || steps.detect.outputs.mode == 'implement')
         uses: actions/github-script@v7
         with:
           script: |
-            const mode = '${{ steps.detect.outputs.result }}'
+            const mode = '${{ steps.detect.outputs.mode }}'
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             const body = [
               `**opencode run queued** — \`/agent:${mode}\``,
@@ -99,7 +106,7 @@ jobs:
         id: status-running
         if: >-
           steps.check_access.outputs.result == 'true' &&
-          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+          (steps.detect.outputs.mode == 'research' || steps.detect.outputs.mode == 'implement')
         uses: actions/github-script@v7
         with:
           script: |
@@ -120,7 +127,7 @@ jobs:
 
       - name: Research mode
         id: research
-        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'research'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.mode == 'research'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -137,9 +144,15 @@ jobs:
             Investigate the codebase and the issue, then propose concrete changes in your final reply.
             Your final reply will be posted automatically as a comment by the system.
 
+            The following is the verbatim text of the message that triggered this run
+            (the command line itself was removed):
+            <user_request>
+            ${{ steps.detect.outputs.request }}
+            </user_request>
+
       - name: Implement mode
         id: implement
-        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'implement'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.mode == 'implement'
         uses: anomalyco/opencode/github@latest
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -162,11 +175,17 @@ jobs:
               - Put your follow-up questions in your final reply.
               - Your final reply will be posted automatically as a comment on the issue by the system.
 
+            The following is the verbatim text of the message that triggered this run
+            (the command line itself was removed):
+            <user_request>
+            ${{ steps.detect.outputs.request }}
+            </user_request>
+
       - name: Post final status
         id: status-final
         if: >-
           always() && steps.check_access.outputs.result == 'true' &&
-          (steps.detect.outputs.result == 'research' || steps.detect.outputs.result == 'implement')
+          (steps.detect.outputs.mode == 'research' || steps.detect.outputs.mode == 'implement')
         uses: actions/github-script@v7
         with:
           script: |
@@ -195,7 +214,7 @@ jobs:
             })
 
       - name: Invalid mention
-        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.result == 'invalid'
+        if: steps.check_access.outputs.result == 'true' && steps.detect.outputs.mode == 'invalid'
         uses: actions/github-script@v7
         with:
           script: |
