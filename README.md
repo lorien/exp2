@@ -12,6 +12,7 @@ Experimental repository: a workflow for planning and implementing things via Git
 - **Headless execution** — runs inside GitHub Actions with no TTY; status is tracked on the issue (queued → running → done / failed / cancelled) with a link to the run logs.
 - **Controlled access** — only collaborators with write access or higher (plus the repo owner) can trigger the agent; commands from anyone else are ignored.
 - **Hang-safe permissions** — `opencode.json` removes every `ask` permission (`external_directory`, `doom_loop`, `question`, `read`), so headless runs can never block forever on an unanswerable prompt.
+- **Concurrency & timeouts** — a new valid `/agent:` command on the same issue cancels the previous run (invalid mentions never do), and the job is hard-capped at 30 minutes.
 
 ## Repository layout
 

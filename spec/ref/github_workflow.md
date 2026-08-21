@@ -60,6 +60,16 @@ Failure detection is based on the outcome of the research/implement step. Any fa
 
 The status comment is separate from the agent's result comment (created and edited by the opencode action itself), which carries the actual content: the research proposal, the PR number, follow-up questions, or the error message. No run logs are persisted — the status comment and the agent's result comment are the only traces left on the issue. Status comments never start with `/agent:`, so they do not re-trigger the workflow.
 
+## Concurrency
+
+Runs triggered by valid `/agent:research` or `/agent:implement` commands on the same issue share a concurrency group: starting a new run automatically cancels any queued or in-progress run for that issue (the newest command wins). A cancelled run reports **cancelled** in its own status comment, then the new run posts its own fresh status comment — each run owns exactly one mutable status comment.
+
+Triggers that are not valid commands (e.g. an invalid `/agent:` mention) get a unique per-run group instead, so posting one can never cancel a live agent run. Runs on different issues are always independent.
+
+## Timeouts
+
+The job has a 30-minute timeout (`timeout-minutes: 30`). If the agent exceeds it, GitHub cancels the run and the status comment is updated to **cancelled** (reported via the same final-status step as a manual cancellation). This bounds the cost of a hung run instead of relying on the default 6-hour Actions limit.
+
 ## Headless permission handling
 
 The GitHub action runs opencode headlessly via `opencode github run` — there is no `--auto` flag, no TTY, and nothing ever answers a permission prompt. As a result, any permission that resolves to `ask` blocks the run indefinitely (opencode awaits a reply that never arrives) until GitHub force-cancels the job at the default 6-hour limit.
